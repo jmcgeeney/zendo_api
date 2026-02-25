@@ -92,7 +92,7 @@ class DatabaseClient:
         lat: float,
         lon: float,
         start: datetime,
-        end: datetime,
+        end: datetime, # end is exclusive
     ) -> list[Irradiance]:
         with get_session() as db:
             rows = db.execute(
@@ -101,7 +101,7 @@ class DatabaseClient:
                     Irradiance.latitude == lat,
                     Irradiance.longitude == lon,
                     Irradiance.timestamp >= start,
-                    Irradiance.timestamp <= end,
+                    Irradiance.timestamp < end,
                 )
                 .order_by(Irradiance.timestamp)
             ).scalars().all()
@@ -144,7 +144,7 @@ class DatabaseClient:
         self,
         customer_id: int,
         start: datetime,
-        end: datetime,
+        end: datetime, # end is exclusive
     ) -> list[Consumption]:
         with get_session() as db:
             rows = db.execute(
@@ -152,7 +152,7 @@ class DatabaseClient:
                 .where(
                     Consumption.customer_id == customer_id,
                     Consumption.timestamp >= start,
-                    Consumption.timestamp <= end,
+                    Consumption.timestamp < end,
                 )
                 .order_by(Consumption.timestamp)
             ).scalars().all()
@@ -195,7 +195,7 @@ class DatabaseClient:
         self,
         customer_id: int,
         start: datetime,
-        end: datetime,
+        end: datetime, # end is exclusive
     ) -> list[Production]:
         with get_session() as db:
             rows = db.execute(
@@ -203,7 +203,7 @@ class DatabaseClient:
                 .where(
                     Production.customer_id == customer_id,
                     Production.timestamp >= start,
-                    Production.timestamp <= end,
+                    Production.timestamp < end,
                 )
                 .order_by(Production.timestamp)
             ).scalars().all()
@@ -232,7 +232,7 @@ class DatabaseClient:
         self,
         customer_id: int,
         start: datetime,
-        end: datetime,
+        end: datetime, # end is exclusive
     ) -> list[Pearson]:
         with get_session() as db:
             rows = db.execute(
@@ -240,7 +240,7 @@ class DatabaseClient:
                 .where(
                     Pearson.customer_id == customer_id,
                     Pearson.timestamp >= start,
-                    Pearson.timestamp <= end,
+                    Pearson.timestamp < end,
                 )
                 .order_by(Pearson.timestamp)
             ).scalars().all()
@@ -289,7 +289,7 @@ class DatabaseClient:
         lat: float,
         lon: float,
         start: datetime,
-        end: datetime,
+        end: datetime, # end is exclusive
     ) -> list[Weather]:
         with get_session() as db:
             rows = db.execute(
@@ -298,7 +298,7 @@ class DatabaseClient:
                     Weather.latitude == lat,
                     Weather.longitude == lon,
                     Weather.timestamp >= start,
-                    Weather.timestamp <= end,
+                    Weather.timestamp < end,
                 )
                 .order_by(Weather.timestamp)
             ).scalars().all()

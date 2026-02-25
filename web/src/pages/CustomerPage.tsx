@@ -101,7 +101,22 @@ function KpiTile({
     );
 }
 
-function ChartCard({ title, children }: { title: string; children: ReactNode }) {
+function correlationColor(r: number): string {
+    const abs = Math.abs(r);
+    if (abs >= 0.7) return r >= 0 ? '#10b981' : '#ef4444';
+    if (abs >= 0.4) return '#f59e0b';
+    return '#94a3b8';
+}
+
+function ChartCard({
+    title,
+    children,
+    correlation,
+}: {
+    title: string;
+    children: ReactNode;
+    correlation?: number | null;
+}) {
     return (
         <div
             style={{
@@ -111,9 +126,50 @@ function ChartCard({ title, children }: { title: string; children: ReactNode }) 
                 padding: '1.25rem 1.25rem 0.75rem',
             }}
         >
-            <h3 style={{ margin: '0 0 1rem', fontSize: '0.9375rem', fontWeight: 600, color: '#0f172a' }}>
-                {title}
-            </h3>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '1rem',
+                }}
+            >
+                <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#0f172a' }}>
+                    {title}
+                </h3>
+                {correlation != null && (
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
+                            gap: 1,
+                        }}
+                    >
+                        <span
+                            style={{
+                                fontSize: '0.6875rem',
+                                fontWeight: 500,
+                                color: '#94a3b8',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                            }}
+                        >
+                            Pearson r
+                        </span>
+                        <span
+                            style={{
+                                fontSize: '1.125rem',
+                                fontWeight: 700,
+                                color: correlationColor(correlation),
+                                fontVariantNumeric: 'tabular-nums',
+                            }}
+                        >
+                            {correlation >= 0 ? '+' : ''}{correlation.toFixed(2)}
+                        </span>
+                    </div>
+                )}
+            </div>
             {children}
         </div>
     );
@@ -410,7 +466,10 @@ export default function CustomerPage() {
                         </ChartCard>
 
                         {/* Chart 2: Irradiance vs Production */}
-                        <ChartCard title="Solar Irradiance vs Production">
+                        <ChartCard
+                            title="Solar Irradiance vs Production"
+                            correlation={energySummary?.correlation?.solar_irradiance_vs_production ?? null}
+                        >
                             {timeseries.irradiance.length === 0 ? (
                                 <p
                                     style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem 0', margin: 0 }}
@@ -468,7 +527,10 @@ export default function CustomerPage() {
                         </ChartCard>
 
                         {/* Chart 3: Temperature vs Consumption */}
-                        <ChartCard title="Temperature vs Consumption">
+                        <ChartCard
+                            title="Temperature vs Consumption"
+                            correlation={energySummary?.correlation?.temperature_vs_consumption ?? null}
+                        >
                             <ResponsiveContainer width="100%" height={260}>
                                 <ComposedChart data={tempConsumptionData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />

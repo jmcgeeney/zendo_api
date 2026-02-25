@@ -19,6 +19,8 @@ from datetime import date, datetime, timezone
 from api.clients.openweather import OpenWeatherClient, OpenWeatherError
 from api.config import settings
 from api.db.client import DatabaseClient
+from lib.time_util import interval_minutes, intervals_per_day
+from lib.types import TimeInterval
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -32,23 +34,14 @@ logging.basicConfig(
 log = logging.getLogger("etl.irradiance")
 
 # ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-_INTERVAL = "15m"           # 15-minute intervals → 96 readings per day
-_EXPECTED_READINGS = 96
-_INTERVAL_MINUTES = 15
-
-
-# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _current_interval_cutoff() -> datetime:
+def _current_interval_cutoff(time_interval: TimeInterval) -> datetime:
     """Return the start of the current 15-minute interval (UTC, timezone-aware)."""
     now = datetime.now(tz=timezone.utc)
-    floored_minute = (now.minute // _INTERVAL_MINUTES) * _INTERVAL_MINUTES
+    floored_minute = (now.minute // interval_minutes(time_interval)) * interval_minutes(time_interval)
     return now.replace(minute=floored_minute, second=0, microsecond=0)
 
 
@@ -76,7 +69,7 @@ def _parse_intervals(response: dict) -> list[tuple[datetime, float]]:
 # ---------------------------------------------------------------------------
 
 
-def run(target_date: date | None = None) -> None:
+def run(target_date: date | None = None, time_interval: TimeInterval = "15m") -> None:
     if not settings.OPENWEATHER_API_KEY:
         raise RuntimeError(
             "OPENWEATHER_API_KEY is not set. "
@@ -87,7 +80,7 @@ def run(target_date: date | None = None) -> None:
     log.info("Running irradiance ETL for %s", target_date.isoformat())
 
     is_today = target_date == date.today()
-    cutoff = _current_interval_cutoff() if is_today else None
+    cutoff = _current_interval_cutoff(time_interval) if is_today else None
     if cutoff is not None:
         log.info("Today's run — limiting to intervals through %s UTC.", cutoff.strftime("%H:%M"))
 
@@ -123,7 +116,7 @@ def run(target_date: date | None = None) -> None:
                     lat=c.latitude,
                     lon=c.longitude,
                     day=target_date,
-                    interval=_INTERVAL,
+                    interval=time_interval,
                 )
             except OpenWeatherError as exc:
                 log.error(
@@ -153,10 +146,10 @@ def run(target_date: date | None = None) -> None:
                     len(readings),
                     cutoff.strftime("%H:%M"),
                 )
-            elif len(readings) != _EXPECTED_READINGS:
+            elif len(readings) != intervals_per_day(time_interval):
                 log.warning(
                     "  Expected %d readings but got %d for (%.4f, %.4f) — skipping.",
-                    _EXPECTED_READINGS,
+                    intervals_per_day(time_interval),
                     len(readings),
                     c.latitude,
                     c.longitude,

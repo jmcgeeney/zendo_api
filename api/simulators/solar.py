@@ -80,21 +80,17 @@ class SolarSimulator:
     def __init__(
         self,
         installed_capacity_kw: float,
-        performance_ratio: float = 0.80,
-        temp_coefficient: float = -0.004,
-        interval_hours: float = 0.5,
+        performance_ratio: float,
+        temp_coefficient: float,
     ) -> None:
         if installed_capacity_kw <= 0:
             raise ValueError("installed_capacity_kw must be positive")
         if not 0.0 < performance_ratio <= 1.0:
             raise ValueError("performance_ratio must be in (0, 1]")
-        if interval_hours <= 0:
-            raise ValueError("interval_hours must be positive")
 
         self.installed_capacity_kw = installed_capacity_kw
         self.performance_ratio = performance_ratio
         self.temp_coefficient = temp_coefficient
-        self.interval_hours = interval_hours
 
     # ------------------------------------------------------------------
     # Internal helpers

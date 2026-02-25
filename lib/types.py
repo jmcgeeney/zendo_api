@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Dict, Literal, Optional
 
 
-TimeSlice = Literal["hourly", "30m", "15m"]
+TimeInterval = Literal["hourly", "30m", "15m"]
 
 @dataclass
 class DailyProfile:

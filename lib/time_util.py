@@ -1,20 +1,35 @@
-from lib.types import TimeSlice
+from datetime import date, datetime, timedelta, time
+from lib.types import TimeInterval
+from lib.constants import MINUTES_IN_HOUR, HOURS_IN_DAY
 
-
-INTERVAL_HOURS: dict[TimeSlice, float] = {
-    "hourly": 1.0,
-    "30m": 0.5,
-    "15m": 0.25,
+INTERVAL_MINUTES: dict[TimeInterval, int] = {
+    "hourly": 60,
+    "30m": 30,
+    "15m": 15,
 }
 
-DOWNSAMPLE_FACTOR: dict[TimeSlice, int] = {
-    "hourly": 4,   # 4 * 15m = 1h
-    "30m": 2,      # 2 * 15m = 30m
-    "15m": 1,      # no downsampling
-}
+def interval_hours(time_slice: TimeInterval) -> float:
+    return INTERVAL_MINUTES[time_slice] / MINUTES_IN_HOUR
 
-def get_interval_hours(time_slice: TimeSlice) -> float:
-    return INTERVAL_HOURS[time_slice]
+def downsample_factor(time_slice: TimeInterval) -> int:
+    return MINUTES_IN_HOUR / INTERVAL_MINUTES[time_slice]
 
-def get_downsample_factor(time_slice: TimeSlice) -> int:
-    return DOWNSAMPLE_FACTOR[time_slice]
+def interval_minutes(time_slice: TimeInterval) -> int:
+    return INTERVAL_MINUTES[time_slice]
+
+def intervals_per_day(time_slice: TimeInterval) -> int:
+    return int(HOURS_IN_DAY / interval_hours(time_slice))
+
+def interval_timedelta(time_slice: TimeInterval) -> timedelta:
+    return timedelta(minutes=interval_minutes(time_slice))
+
+def date_to_datetime(d: date) -> datetime:
+    """Return midnight UTC for *d* as a timezone-naive datetime."""
+    return datetime.combine(d, time.min)
+
+def day_window(day: date) -> tuple[datetime, datetime]:
+    """Return (start, end) datetime pair covering every 15-min slot in *day*."""
+    start = datetime.combine(day, time.min)
+    end = start + timedelta(days=1)
+
+    return start, end

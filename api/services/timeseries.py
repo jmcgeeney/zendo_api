@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
+from lib.time_util import day_window
 from lib.types import TimeSeriesPoint, HistoricalData
 
 
@@ -24,18 +25,17 @@ class TimeSeriesService:
         if customer is None:
             raise CustomerNotFoundError(customer_id)
 
-        start = datetime.combine(day, time.min)
-        end = datetime.combine(day, time.max)
+        start_time, end_time = day_window(day)
 
-        production_rows = self._db.get_production_series(customer_id, start, end)
-        consumption_rows = self._db.get_consumption_series(customer_id, start, end)
+        production_rows = self._db.get_production_series(customer_id, start_time, end_time)
+        consumption_rows = self._db.get_consumption_series(customer_id, start_time, end_time)
         weather_rows = self._db.get_weather_series(
-            customer.latitude, customer.longitude, start, end
+            customer.latitude, customer.longitude, start_time, end_time
         )
         irradiance_rows = self._db.get_irradiance_series(
-            customer.latitude, customer.longitude, start, end
+            customer.latitude, customer.longitude, start_time, end_time
         )
-        correlation_rows = self._db.get_pearson_series(customer_id, start, end)
+        correlation_rows = self._db.get_pearson_series(customer_id, start_time, end_time)
 
         return HistoricalData(
             customer_id=customer_id,

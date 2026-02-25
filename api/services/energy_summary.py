@@ -5,6 +5,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Optional
 
 from api.db.client import DatabaseClient
+from lib.time_util import day_window, interval_hours
 
 
 class CustomerNotFoundError(Exception):
@@ -48,17 +49,16 @@ class EnergySummaryService:
         if customer is None:
             raise CustomerNotFoundError(customer_id)
 
-        day_start = datetime.combine(target_date, time.min)
-        day_end = day_start + timedelta(hours=23, minutes=45)
+        start_time, end_time = day_window(target_date)
 
         # ------------------------------------------------------------------
         # Totals — sum kW readings over 15-min intervals → kWh (* 0.25 h)
         # ------------------------------------------------------------------
-        production_rows = self._db.get_production_series(customer_id, day_start, day_end)
-        consumption_rows = self._db.get_consumption_series(customer_id, day_start, day_end)
+        production_rows = self._db.get_production_series(customer_id, start_time, end_time)
+        consumption_rows = self._db.get_consumption_series(customer_id, start_time, end_time)
 
-        total_production_kwh = round(sum(r.power for r in production_rows) * 0.25, 3)
-        total_consumption_kwh = round(sum(r.power for r in consumption_rows) * 0.25, 3)
+        total_production_kwh = round(sum(r.power for r in production_rows) * interval_hours("15m"), 3)
+        total_consumption_kwh = round(sum(r.power for r in consumption_rows) * interval_hours("15m"), 3)
         net_kwh = round(total_production_kwh - total_consumption_kwh, 3)
 
         # ------------------------------------------------------------------
@@ -68,8 +68,8 @@ class EnergySummaryService:
         weather_rows = self._db.get_weather_series(
             lat=customer.latitude,
             lon=customer.longitude,
-            start=day_start,
-            end=day_end,
+            start=start_time,
+            end=end_time,
         )
         if weather_rows:
             temps = [r.temperature for r in weather_rows]
@@ -85,7 +85,7 @@ class EnergySummaryService:
         # Correlation — latest Pearson row for the target date
         # ------------------------------------------------------------------
         correlation: Optional[Correlation] = None
-        pearson_rows = self._db.get_pearson_series(customer_id, day_start, day_end)
+        pearson_rows = self._db.get_pearson_series(customer_id, start_time, end_time)
         if pearson_rows:
             latest = pearson_rows[-1]
             correlation = Correlation(

@@ -24,6 +24,8 @@ from typing import NamedTuple
 from api.clients.openweather import OpenWeatherClient, OpenWeatherError
 from api.config import settings
 from api.db.client import DatabaseClient
+from lib.time_util import interval_minutes
+from lib.types import TimeInterval
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -35,12 +37,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 log = logging.getLogger("etl.weather")
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-_INTERVAL_MINUTES = 15
 
 
 # ---------------------------------------------------------------------------
@@ -58,13 +54,13 @@ def _floor_to_hour(dt: datetime) -> datetime:
     return dt.replace(minute=0, second=0, microsecond=0)
 
 
-def _build_15min_timestamps(start: datetime, end: datetime) -> list[datetime]:
+def _build_timestamps(start: datetime, end: datetime, time_interval: TimeInterval) -> list[datetime]:
     """Return all 15-minute-aligned UTC-naive datetimes in [start, end]."""
     timestamps: list[datetime] = []
     current = start
     while current <= end:
         timestamps.append(current)
-        current += timedelta(minutes=_INTERVAL_MINUTES)
+        current += timedelta(minutes=interval_minutes(time_interval))
     return timestamps
 
 
@@ -103,7 +99,7 @@ def _parse_weather_row(
 # ---------------------------------------------------------------------------
 
 
-def run(start_override: date | None = None) -> None:
+def run(start_override: date | None = None, time_interval: TimeInterval = "15m") -> None:
     if not settings.OPENWEATHER_API_KEY:
         raise RuntimeError(
             "OPENWEATHER_API_KEY is not set. "
@@ -145,7 +141,7 @@ def run(start_override: date | None = None) -> None:
             last_ts = db_client.get_last_weather_timestamp(lat, lon)
             if last_ts is not None:
                 # Resume from the next 15-minute slot after the last stored row.
-                start_dt = last_ts + timedelta(minutes=_INTERVAL_MINUTES)
+                start_dt = last_ts + timedelta(minutes=interval_minutes(time_interval))
                 log.info("  Resuming from %s", start_dt.isoformat())
             else:
                 start_dt = backfill_start
@@ -156,14 +152,14 @@ def run(start_override: date | None = None) -> None:
             continue
 
         # ------------------------------------------------------------------
-        # Step 2 — build the 15-minute timestamp grid
+        # Step 2 — build the timestamp grid
         # ------------------------------------------------------------------
-        timestamps_15m = _build_15min_timestamps(start_dt, now)
-        log.info("  %d timestamps to fill (%.1f hours)", len(timestamps_15m), len(timestamps_15m) / 4)
+        timestamps = _build_timestamps(start_dt, now, time_interval)
+        log.info("  %d timestamps to fill (%.1f hours)", len(timestamps), len(timestamps) / 4)
 
         # Deduplicate to unique hours so we make one API call per hour.
         unique_hours: dict[datetime, list[datetime]] = {}
-        for ts in timestamps_15m:
+        for ts in timestamps:
             hour = _floor_to_hour(ts)
             unique_hours.setdefault(hour, []).append(ts)
 
@@ -172,7 +168,7 @@ def run(start_override: date | None = None) -> None:
         # ------------------------------------------------------------------
         rows: list[dict] = []
 
-        for hour_ts, slot_timestamps in sorted(unique_hours.items()):
+        for hour_ts, slot_timestamps in sorted(unique_hours.items()): # TODO: limit total calls by only fetching on published intervals
             try:
                 response = weather_client.get_timemachine(
                     lat=lat,
