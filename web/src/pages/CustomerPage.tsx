@@ -450,6 +450,7 @@ export default function CustomerPage() {
                                         stroke="#10b981"
                                         strokeWidth={2}
                                         dot={false}
+                                        isAnimationActive={false}
                                         name="Production (kW)"
                                     />
                                     <Area
@@ -459,6 +460,7 @@ export default function CustomerPage() {
                                         stroke="#f59e0b"
                                         strokeWidth={2}
                                         dot={false}
+                                        isAnimationActive={false}
                                         name="Consumption (kW)"
                                     />
                                 </ComposedChart>
@@ -510,6 +512,7 @@ export default function CustomerPage() {
                                             stroke="#f59e0b"
                                             strokeWidth={2}
                                             dot={false}
+                                            isAnimationActive={false}
                                             name="Irradiance (W/m²)"
                                         />
                                         <Line
@@ -519,6 +522,7 @@ export default function CustomerPage() {
                                             stroke="#10b981"
                                             strokeWidth={2}
                                             dot={false}
+                                            isAnimationActive={false}
                                             name="Production (kW)"
                                         />
                                     </ComposedChart>
@@ -564,6 +568,7 @@ export default function CustomerPage() {
                                         stroke="#6366f1"
                                         strokeWidth={2}
                                         dot={false}
+                                        isAnimationActive={false}
                                         name="Temperature (°C)"
                                     />
                                     <Line
@@ -573,6 +578,7 @@ export default function CustomerPage() {
                                         stroke="#f59e0b"
                                         strokeWidth={2}
                                         dot={false}
+                                        isAnimationActive={false}
                                         name="Consumption (kW)"
                                     />
                                 </ComposedChart>
