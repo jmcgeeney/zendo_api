@@ -13,7 +13,7 @@ from api.simulators.datacenter import DatacenterSimulator
 @pytest.fixture
 def sim() -> DatacenterSimulator:
     """Default 500 kW IT-load simulator."""
-    return DatacenterSimulator(it_load_kw=500.0)
+    return DatacenterSimulator(it_load_kw=500.0, jitter=0.0)
 
 
 # ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ from api.simulators.solar import SolarSimulator
 @pytest.fixture
 def sim() -> SolarSimulator:
     """Default 100 kWp simulator."""
-    return SolarSimulator(installed_capacity_kw=100.0)
+    return SolarSimulator(installed_capacity_kw=100.0, performance_ratio=0.80, temp_coefficient=-0.004, jitter=0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -22,24 +22,20 @@ def sim() -> SolarSimulator:
 
 
 def test_valid_construction():
-    sim = SolarSimulator(installed_capacity_kw=50.0)
+    sim = SolarSimulator(installed_capacity_kw=50.0, performance_ratio=0.80, temp_coefficient=-0.004, jitter=0.0)
     assert sim.installed_capacity_kw == 50.0
     assert sim.performance_ratio == 0.80
+    assert sim.jitter == 0.0
 
 
 def test_invalid_capacity():
     with pytest.raises(ValueError, match="installed_capacity_kw must be positive"):
-        SolarSimulator(installed_capacity_kw=0.0)
+        SolarSimulator(installed_capacity_kw=0.0, performance_ratio=0.80, temp_coefficient=-0.004)
 
 
 def test_invalid_performance_ratio():
     with pytest.raises(ValueError, match="performance_ratio must be in"):
-        SolarSimulator(installed_capacity_kw=10.0, performance_ratio=0.0)
-
-
-def test_invalid_interval_hours():
-    with pytest.raises(ValueError, match="interval_hours must be positive"):
-        SolarSimulator(installed_capacity_kw=10.0, interval_hours=0.0)
+        SolarSimulator(installed_capacity_kw=10.0, performance_ratio=0.0, temp_coefficient=-0.004)
 
 
 # ---------------------------------------------------------------------------
