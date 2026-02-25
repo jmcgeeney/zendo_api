@@ -88,7 +88,9 @@ class DatacenterSimulator:
             # Total facility power = IT load × utilisation × PUE
             load = self.it_load_kw * self.utilisation * pue
 
-            jittered_load = max(load + predictable_jitter(t_amb, self.jitter), 0.0)  # clamp — derating (or jitter) can't make load negative
+            print(t_amb)
+
+            jittered_load = load + predictable_jitter(t_amb, self.jitter, 2)
 
             loads.append(jittered_load)
 

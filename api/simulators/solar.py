@@ -184,7 +184,7 @@ class SolarSimulator:
             # AC output after system losses
             p_ac = p_dc * f_temp * self.performance_ratio
 
-            jittered_production = max(p_ac + predictable_jitter(ghi, self.jitter), 0.0)  # clamp — derating (or jitter) can't make output negative
+            jittered_production = max(p_ac + predictable_jitter(ghi, self.jitter, 2), 0.0)  # clamp — derating (or jitter) can't make output negative
 
             output.append(jittered_production)
 
