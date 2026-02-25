@@ -45,23 +45,6 @@ class Customer(Base):
 # ---------------------------------------------------------------------------
 
 
-class Temperature(Base):
-    """15-minute temperature readings indexed by location and time."""
-
-    __tablename__ = "temperature"
-
-    latitude: Mapped[float] = mapped_column(Float, primary_key=True)
-    longitude: Mapped[float] = mapped_column(Float, primary_key=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, primary_key=True)
-    temperature: Mapped[float] = mapped_column(Float, nullable=False)
-
-    def __repr__(self) -> str:
-        return (
-            f"<Temperature lat={self.latitude} lon={self.longitude}"
-            f" ts={self.timestamp} val={self.temperature}>"
-        )
-
-
 class Irradiance(Base):
     """15-minute solar irradiance readings indexed by location and time."""
 

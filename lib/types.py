@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, date
-from typing import Literal, Optional
+from typing import Dict, Literal, Optional
 
 
 TimeSlice = Literal["hourly", "30m", "15m"]
@@ -29,4 +29,4 @@ class HistoricalData:
     consumption: list[TimeSeriesPoint]
     temperature: list[TimeSeriesPoint]
     irradiance: list[TimeSeriesPoint]
-    correlation: None  # not yet implemented
+    correlation: Optional[Dict[str, Optional[float]]]

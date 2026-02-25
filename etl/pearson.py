@@ -96,7 +96,7 @@ def run(target_date: date | None = None) -> None:
         prod_rows = db.get_production_series(
             customer_id=c.customer_id, start=fetch_start, end=fetch_end
         )
-        temp_rows = db.get_temperature_series(
+        weather_rows = db.get_weather_series(
             lat=c.latitude, lon=c.longitude, start=fetch_start, end=fetch_end
         )
         cons_rows = db.get_consumption_series(
@@ -105,7 +105,7 @@ def run(target_date: date | None = None) -> None:
 
         irr_by_ts: dict[datetime, float] = {r.timestamp: r.irradiance for r in irr_rows}
         prod_by_ts: dict[datetime, float] = {r.timestamp: r.power for r in prod_rows}
-        temp_by_ts: dict[datetime, float] = {r.timestamp: r.temperature for r in temp_rows}
+        temp_by_ts: dict[datetime, float] = {r.timestamp: r.temperature for r in weather_rows}
         cons_by_ts: dict[datetime, float] = {r.timestamp: r.power for r in cons_rows}
 
         if not irr_by_ts and not temp_by_ts:

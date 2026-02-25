@@ -1,17 +1,12 @@
 """ETL job: run the datacenter simulator for each customer using the
-temperature data already in the database and store the resulting
+weather data already in the database and store the resulting
 consumption time series in the ``consumption`` table.
 
-This job depends on :mod:`etl.temperature` having been run first to
-populate the ``temperature`` table for the target date.
+This job depends on :mod:`etl.weather` having been run first to
+populate the ``weather`` table for the target date.
 
 Run from the repository root with ``api/`` on the Python path::
 
-    PYTHONPATH=api python -m etl.consumption
-
-Or chain the two jobs together::
-
-    PYTHONPATH=api python -m etl.temperature && \\
     PYTHONPATH=api python -m etl.consumption
 """
 
@@ -44,7 +39,7 @@ log = logging.getLogger("etl.consumption")
 # config file or additional database columns) when that data is available.
 # ---------------------------------------------------------------------------
 
-_INTERVAL_HOURS: float = 0.25  # 15-min grid — must match the temperature ETL
+_INTERVAL_HOURS: float = 0.25  # 15-min grid
 
 _DEFAULT_SIMULATOR_PARAMS: dict[str, Any] = {
     "it_load_kw": 1_000.0,      # 1 MW IT load

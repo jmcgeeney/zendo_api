@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-from api.db.models import Consumption, Customer, Irradiance, Pearson, Production, Temperature, Weather
+from api.db.models import Consumption, Customer, Irradiance, Pearson, Production, Weather
 from api.db.session import get_session
 
 
@@ -45,67 +45,6 @@ class DatabaseClient:
         with get_session() as db:
             rows = db.execute(
                 select(Customer).order_by(Customer.customer_id)
-            ).scalars().all()
-            for row in rows:
-                db.expunge(row)
-        return list(rows)
-
-    # ------------------------------------------------------------------
-    # Temperature
-    # ------------------------------------------------------------------
-
-    def upsert_temperature(
-        self,
-        lat: float,
-        lon: float,
-        timestamp: datetime,
-        temperature: float,
-    ) -> None:
-        with get_session() as db:
-            stmt = (
-                sqlite_insert(Temperature)
-                .values(
-                    latitude=lat,
-                    longitude=lon,
-                    timestamp=timestamp,
-                    temperature=temperature,
-                )
-                .on_conflict_do_update(
-                    index_elements=["latitude", "longitude", "timestamp"],
-                    set_={"temperature": temperature},
-                )
-            )
-            db.execute(stmt)
-
-    def upsert_temperature_bulk(
-        self, rows: list[dict]
-    ) -> None:
-        if not rows:
-            return
-        with get_session() as db:
-            stmt = sqlite_insert(Temperature).on_conflict_do_update(
-                index_elements=["latitude", "longitude", "timestamp"],
-                set_={"temperature": sqlite_insert(Temperature).excluded.temperature},
-            )
-            db.execute(stmt, rows)
-
-    def get_temperature_series(
-        self,
-        lat: float,
-        lon: float,
-        start: datetime,
-        end: datetime,
-    ) -> list[Temperature]:
-        with get_session() as db:
-            rows = db.execute(
-                select(Temperature)
-                .where(
-                    Temperature.latitude == lat,
-                    Temperature.longitude == lon,
-                    Temperature.timestamp >= start,
-                    Temperature.timestamp <= end,
-                )
-                .order_by(Temperature.timestamp)
             ).scalars().all()
             for row in rows:
                 db.expunge(row)

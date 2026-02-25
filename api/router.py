@@ -1,17 +1,17 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from clients.openweather import OpenWeatherClient, OpenWeatherError
-from config import settings
-from services.energy_summary import (
+from api.clients.openweather import OpenWeatherClient, OpenWeatherError
+from api.config import settings
+from api.services.energy_summary import (
     CustomerNotFoundError as EnergySummaryNotFoundError,
     EnergySummaryService,
 )
-from services.timeseries import CustomerNotFoundError, TimeSeriesService
-from db.client import DatabaseClient
+from api.services.timeseries import CustomerNotFoundError, TimeSeriesService
+from api.db.client import DatabaseClient
 
 router = APIRouter()
 
@@ -51,7 +51,7 @@ class HistoricalDataResponse(BaseModel):
     consumption: list[TimeSeriesPoint]
     temperature: list[TimeSeriesPoint]
     irradiance: list[TimeSeriesPoint]
-    correlation: dict[str, Optional[float]]
+    correlation: Optional[Dict[str, Optional[float]]]
 
 
 class WeatherSummaryResponse(BaseModel):

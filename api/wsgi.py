@@ -1,8 +1,8 @@
 import uvicorn
 
-from main import create_app
+from api.main import create_app
 
 app = create_app()
 
 if __name__ == "__main__":
-    uvicorn.run("wsgi:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api.wsgi:app", host="0.0.0.0", port=8000, reload=True)

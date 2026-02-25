@@ -59,6 +59,31 @@ def _timestamps_for_day(day: date) -> list[datetime]:
     return [start + timedelta(minutes=15 * i) for i in range(_EXPECTED_READINGS)]
 
 
+def _map_weather_temps(
+    weather_rows: list,
+    timestamps: list[datetime],
+) -> list[float] | None:
+    """Map hourly weather temperatures onto 15-minute timestamps.
+
+    Each 15-min timestamp is floored to its containing hour and looked up in
+    the weather table.  Returns ``None`` if any hour is missing, so the caller
+    can fall back to running without temperature derating rather than crashing.
+    """
+    if not weather_rows:
+        return None
+    temp_by_hour: dict[datetime, float] = {
+        r.timestamp.replace(minute=0, second=0, microsecond=0): r.temperature
+        for r in weather_rows
+    }
+    result: list[float] = []
+    for ts in timestamps:
+        hour_ts = ts.replace(minute=0, second=0, microsecond=0)
+        if hour_ts not in temp_by_hour:
+            return None  # gap in weather data — disable derating
+        result.append(temp_by_hour[hour_ts])
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Core ETL logic
 # ---------------------------------------------------------------------------
@@ -107,20 +132,18 @@ def run(target_date: date | None = None) -> None:
         irradiance = [row.irradiance for row in irradiance_rows]
 
         # ------------------------------------------------------------------
-        # Temperature — optional, enables NOCT derating
+        # Temperature — from weather table, enables NOCT derating
         # ------------------------------------------------------------------
-        temperature_rows = db.get_temperature_series(
+        weather_rows = db.get_weather_series(
             lat=c.latitude, lon=c.longitude, start=start_dt, end=end_dt
         )
-        temperatures: list[float] | None = None
-        if temperature_rows and len(temperature_rows) == _EXPECTED_READINGS:
-            temperatures = [row.temperature for row in temperature_rows]
-        elif temperature_rows:
+        temperatures = _map_weather_temps(weather_rows, timestamps)
+        if temperatures is None and weather_rows:
             log.warning(
-                "  Temperature row count (%d) doesn't match irradiance (%d) "
+                "  Weather temperature coverage incomplete for (%.4f, %.4f) "
                 "— running without temperature derating.",
-                len(temperature_rows),
-                _EXPECTED_READINGS,
+                c.latitude,
+                c.longitude,
             )
 
         # ------------------------------------------------------------------

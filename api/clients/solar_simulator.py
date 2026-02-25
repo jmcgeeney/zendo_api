@@ -23,6 +23,31 @@ def _downsample(values: list[float], factor: int) -> list[float]:
     return result
 
 
+def _map_weather_temps(
+    weather_rows: list,
+    irradiance_rows: list,
+) -> list[float] | None:
+    """Map hourly weather temperatures onto 15-minute irradiance timestamps.
+
+    Each irradiance timestamp is floored to its containing hour and looked up
+    in the weather rows.  Returns ``None`` if any hour is missing so the
+    caller can fall back to no derating rather than crashing.
+    """
+    if not weather_rows:
+        return None
+    temp_by_hour: dict[datetime, float] = {
+        r.timestamp.replace(minute=0, second=0, microsecond=0): r.temperature
+        for r in weather_rows
+    }
+    result: list[float] = []
+    for row in irradiance_rows:
+        hour_ts = row.timestamp.replace(minute=0, second=0, microsecond=0)
+        if hour_ts not in temp_by_hour:
+            return None  # gap — disable derating
+        result.append(temp_by_hour[hour_ts])
+    return result
+
+
 class SolarSimulatorClient:
     def __init__(
         self,
@@ -70,16 +95,12 @@ class SolarSimulatorClient:
         irradiance_15m = [row.irradiance for row in irradiance_rows]
 
         # ------------------------------------------------------------------ #
-        # Fetch temperature (best-effort)                                      #
+        # Fetch temperature from weather table (best-effort, enables derating) #
         # ------------------------------------------------------------------ #
-        temperature_rows = self.db.get_temperature_series(
+        weather_rows = self.db.get_weather_series(
             lat=lat, lon=lon, start=start_dt, end=end_dt
         )
-        temperature_15m: list[float] | None = (
-            [row.temperature for row in temperature_rows]
-            if temperature_rows
-            else None
-        )
+        temperature_15m = _map_weather_temps(weather_rows, irradiance_rows)
 
         # ------------------------------------------------------------------ #
         # Downsample to requested resolution                                   #
@@ -90,8 +111,7 @@ class SolarSimulatorClient:
             _downsample(temperature_15m, factor) if temperature_15m is not None else None
         )
 
-        # Guard: if lengths diverge after downsampling (e.g. the temperature
-        # table has gaps), disable temperature derating rather than crashing.
+        # Guard: lengths should match after parallel downsampling, but be safe.
         if temperatures is not None and len(temperatures) != len(irradiance):
             temperatures = None
 
