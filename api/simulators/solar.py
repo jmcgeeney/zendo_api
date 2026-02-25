@@ -50,6 +50,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
+from lib.predictable_jitter import predictable_jitter
+
 _G_STC = 1000.0  # W/m² — Standard Test Condition irradiance reference
 _NOCT_DELTA_T = 25.0  # °C — typical cell temperature rise above ambient at 1000 W/m²
 
@@ -75,6 +77,9 @@ class SolarSimulator:
         interval_hours:        Duration of each time step in hours.  Does not
                                affect the power calculation but is recorded
                                for consistency with sibling simulators.
+        jitter:                Magnitude of deterministic jitter to add to
+                               outputs, expressed as the maximum absolute value
+                               of a zero-mean integer jitter.  Defaults to 0
     """
 
     def __init__(
@@ -82,6 +87,7 @@ class SolarSimulator:
         installed_capacity_kw: float,
         performance_ratio: float,
         temp_coefficient: float,
+        jitter: int = 0,
     ) -> None:
         if installed_capacity_kw <= 0:
             raise ValueError("installed_capacity_kw must be positive")
@@ -91,6 +97,7 @@ class SolarSimulator:
         self.installed_capacity_kw = installed_capacity_kw
         self.performance_ratio = performance_ratio
         self.temp_coefficient = temp_coefficient
+        self.jitter = jitter
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -177,7 +184,9 @@ class SolarSimulator:
             # AC output after system losses
             p_ac = p_dc * f_temp * self.performance_ratio
 
-            output.append(max(p_ac, 0.0))  # clamp — derating can't make output negative
+            jittered_production = max(p_ac + predictable_jitter(ghi, self.jitter), 0.0)  # clamp — derating (or jitter) can't make output negative
+
+            output.append(jittered_production)
 
         return output
 

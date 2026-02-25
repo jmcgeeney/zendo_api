@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
+from lib.predictable_jitter import predictable_jitter
+
 
 class DatacenterSimulator:
     """
@@ -19,6 +21,7 @@ class DatacenterSimulator:
         tau_mass_hours: float = 6.0,
         alpha: float = 0.70,
         interval_hours: float = 0.25,
+        jitter: int = 0,
     ) -> None:
         if not 0.0 < utilisation <= 1.0:
             raise ValueError("utilisation must be in (0, 1]")
@@ -30,6 +33,7 @@ class DatacenterSimulator:
             raise ValueError("time constants must be positive")
         if interval_hours <= 0:
             raise ValueError("interval_hours must be positive")
+        self.jitter = jitter
 
         self.it_load_kw = it_load_kw
         self.utilisation = utilisation
@@ -82,7 +86,11 @@ class DatacenterSimulator:
             pue = self.pue_base + self.pue_temp_coeff * max(0.0, t_eff - self.temp_setpoint)
 
             # Total facility power = IT load × utilisation × PUE
-            loads.append(self.it_load_kw * self.utilisation * pue)
+            load = self.it_load_kw * self.utilisation * pue
+
+            jittered_load = max(load + predictable_jitter(t_amb, self.jitter), 0.0)  # clamp — derating (or jitter) can't make load negative
+
+            loads.append(jittered_load)
 
         return loads
 

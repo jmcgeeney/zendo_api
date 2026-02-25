@@ -33,3 +33,7 @@ def day_window(day: date) -> tuple[datetime, datetime]:
     end = start + timedelta(days=1)
 
     return start, end
+
+def timestamps_for_day(day: date, time_interval: TimeInterval) -> list[datetime]:
+    start = datetime.combine(day, time.min)
+    return [start + interval_timedelta(time_interval) * i for i in range(intervals_per_day(time_interval))]

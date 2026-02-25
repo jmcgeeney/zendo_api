@@ -131,6 +131,7 @@ def _simulator_for_customer(customer: Any, time_interval: TimeInterval) -> Any:
         tau_mass_hours=6.0,
         alpha=0.70,
         interval_hours=interval_hours(time_interval), # Defaults to 15m
+        jitter=0.5,
     )
 
 

@@ -4,10 +4,9 @@ import logging
 import sys
 from datetime import date, datetime, time, timedelta
 
-from api.config import settings
 from api.db.client import DatabaseClient
 from api.simulators.solar import SolarSimulator
-from lib.time_util import day_window, interval_hours, interval_timedelta, intervals_per_day
+from lib.time_util import day_window, interval_hours, timestamps_for_day
 from lib.types import TimeInterval
 
 # ---------------------------------------------------------------------------
@@ -32,40 +31,8 @@ def _simulator_for_customer(interval_hours: float) -> SolarSimulator:
         installed_capacity_kw=500.0,
         performance_ratio=0.80,
         temp_coefficient=-0.004,
-        noct_delta_t=25.0,
-        interval_hours=interval_hours, # 15m intervals
+        jitter=3.0,
     )
-
-
-def _timestamps_for_day(day: date, time_interval: TimeInterval) -> list[datetime]:
-    start = datetime.combine(day, time.min)
-    return [start + interval_timedelta(time_interval) * i for i in range(intervals_per_day(time_interval))]
-
-
-def _map_weather_temps(
-    weather_rows: list,
-    timestamps: list[datetime],
-) -> list[float] | None:
-    """Map hourly weather temperatures onto 15-minute timestamps.
-
-    Each 15-min timestamp is floored to its containing hour and looked up in
-    the weather table.  Returns ``None`` if any hour is missing, so the caller
-    can fall back to running without temperature derating rather than crashing.
-    """
-    if not weather_rows:
-        return None
-    temp_by_hour: dict[datetime, float] = {
-        r.timestamp.replace(minute=0, second=0, microsecond=0): r.temperature
-        for r in weather_rows
-    }
-    result: list[float] = []
-    for ts in timestamps:
-        hour_ts = ts.replace(minute=0, second=0, microsecond=0)
-        if hour_ts not in temp_by_hour:
-            return None  # gap in weather data — disable derating
-        result.append(temp_by_hour[hour_ts])
-    return result
-
 
 # ---------------------------------------------------------------------------
 # Core ETL logic
@@ -83,7 +50,6 @@ def run(target_date: date | None = None, time_interval: TimeInterval = "15m") ->
         return
 
     start_time, end_time = day_window(target_date)
-    timestamps = _timestamps_for_day(target_date, time_interval)
     total_upserted = 0
 
     for c in customers:
@@ -104,14 +70,6 @@ def run(target_date: date | None = None, time_interval: TimeInterval = "15m") ->
             )
             continue
 
-        if len(irradiance_rows) != intervals_per_day(time_interval):
-            log.warning(
-                "  Expected %d irradiance readings but got %d — skipping.",
-                intervals_per_day(time_interval),
-                len(irradiance_rows),
-            )
-            continue
-
         irradiance = [row.irradiance for row in irradiance_rows]
 
         # ------------------------------------------------------------------
@@ -120,14 +78,26 @@ def run(target_date: date | None = None, time_interval: TimeInterval = "15m") ->
         weather_rows = db.get_weather_series(
             lat=c.latitude, lon=c.longitude, start=start_time, end=end_time
         )
-        temperatures = _map_weather_temps(weather_rows, timestamps)
-        if temperatures is None and weather_rows:
+        temperatures = [row.temperature for row in weather_rows]
+        if not temperatures and weather_rows:
             log.warning(
                 "  Weather temperature coverage incomplete for (%.4f, %.4f) "
                 "— running without temperature derating.",
                 c.latitude,
                 c.longitude,
             )
+        
+        if len(irradiance) != len(temperatures):
+            log.warning(
+                "  Irradiance data length (%d) does not match expected "
+                "temperatures length (%d) for customer %d — skipping.",
+                len(irradiance),
+                len(temperatures),
+                c.customer_id,
+            )
+            continue
+        
+        timestamps = timestamps_for_day(target_date, time_interval)[:len(irradiance)]
 
         # ------------------------------------------------------------------
         # Simulate

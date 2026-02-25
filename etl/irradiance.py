@@ -39,7 +39,7 @@ log = logging.getLogger("etl.irradiance")
 
 
 def _current_interval_cutoff(time_interval: TimeInterval) -> datetime:
-    """Return the start of the current 15-minute interval (UTC, timezone-aware)."""
+    """Return the start of the current interval (UTC, timezone-aware)."""
     now = datetime.now(tz=timezone.utc)
     floored_minute = (now.minute // interval_minutes(time_interval)) * interval_minutes(time_interval)
     return now.replace(minute=floored_minute, second=0, microsecond=0)
