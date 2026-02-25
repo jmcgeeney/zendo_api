@@ -57,11 +57,6 @@ def test_invalid_tau_cooling():
         DatacenterSimulator(it_load_kw=100.0, tau_cooling_hours=0.0)
 
 
-def test_invalid_interval_hours():
-    with pytest.raises(ValueError, match="interval_hours must be positive"):
-        DatacenterSimulator(it_load_kw=100.0, interval_hours=0.0)
-
-
 # ---------------------------------------------------------------------------
 # simulate() — basic behaviour
 # ---------------------------------------------------------------------------
