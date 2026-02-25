@@ -27,10 +27,15 @@ def date_to_datetime(d: date) -> datetime:
     """Return midnight UTC for *d* as a timezone-naive datetime."""
     return datetime.combine(d, time.min)
 
-def day_window(day: date) -> tuple[datetime, datetime]:
+def day_window(day: date, limit_to_now: bool = True) -> tuple[datetime, datetime]:
     """Return (start, end) datetime pair covering every 15-min slot in *day*."""
     start = datetime.combine(day, time.min)
     end = start + timedelta(days=1)
+
+    if limit_to_now:
+        now = datetime.now()
+        if end > now:
+            end = now
 
     return start, end
 

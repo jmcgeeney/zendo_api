@@ -137,13 +137,13 @@ def test_day_window_start_is_midnight():
 
 def test_day_window_end_is_next_midnight():
     d = date(2025, 3, 10)
-    _, end = day_window(d)
+    _, end = day_window(d, limit_to_now=False)
     assert end == datetime(2025, 3, 11, 0, 0, 0)
 
 
 def test_day_window_span_is_24_hours():
     d = date(2025, 3, 10)
-    start, end = day_window(d)
+    start, end = day_window(d, limit_to_now=False)
     assert (end - start) == timedelta(days=1)
 
 

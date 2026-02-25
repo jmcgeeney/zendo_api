@@ -24,7 +24,7 @@ from typing import NamedTuple
 from api.clients.openweather import OpenWeatherClient, OpenWeatherError
 from api.config import settings
 from api.db.client import DatabaseClient
-from lib.time_util import interval_minutes
+from lib.time_util import day_window, interval_minutes
 from lib.types import TimeInterval
 
 # ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ def _parse_weather_row(
 # ---------------------------------------------------------------------------
 
 
-def run(start_override: date | None = None, time_interval: TimeInterval = "15m") -> None:
+def run(target_date: date | None = None, time_interval: TimeInterval = "15m") -> None:
     if not settings.OPENWEATHER_API_KEY:
         raise RuntimeError(
             "OPENWEATHER_API_KEY is not set. "
@@ -119,8 +119,6 @@ def run(start_override: date | None = None, time_interval: TimeInterval = "15m")
         _Location(c.latitude, c.longitude): None for c in customers
     }
 
-    now = datetime.now(tz=timezone.utc).replace(tzinfo=None)  # UTC-naive
-
     backfill_start = datetime.combine(
         date.fromisoformat(settings.BACKFILL_START_DATE),
         datetime.min.time(),
@@ -135,8 +133,8 @@ def run(start_override: date | None = None, time_interval: TimeInterval = "15m")
         # ------------------------------------------------------------------
         # Step 1 — determine start of fetch window
         # ------------------------------------------------------------------
-        if start_override:
-            start_dt = datetime.combine(start_override, datetime.min.time())
+        if target_date:
+            start_dt, end_dt = day_window(target_date, limit_to_now=True)
         else:
             last_ts = db_client.get_last_weather_timestamp(lat, lon)
             if last_ts is not None:
@@ -146,15 +144,17 @@ def run(start_override: date | None = None, time_interval: TimeInterval = "15m")
             else:
                 start_dt = backfill_start
                 log.info("  No existing data — backfilling from %s", start_dt.isoformat())
+            
+            end_dt = datetime.now(tz=timezone.utc).replace(tzinfo=None)
 
-        if start_dt >= now:
+        if start_dt >= end_dt:
             log.info("  Already up-to-date. Skipping.")
             continue
 
         # ------------------------------------------------------------------
         # Step 2 — build the timestamp grid
         # ------------------------------------------------------------------
-        timestamps = _build_timestamps(start_dt, now, time_interval)
+        timestamps = _build_timestamps(start_dt, end_dt, time_interval)
         log.info("  %d timestamps to fill (%.1f hours)", len(timestamps), len(timestamps) / 4)
 
         # Deduplicate to unique hours so we make one API call per hour.

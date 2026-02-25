@@ -49,7 +49,7 @@ class EnergySummaryService:
         if customer is None:
             raise CustomerNotFoundError(customer_id)
 
-        start_time, end_time = day_window(target_date)
+        start_time, end_time = day_window(target_date, limit_to_now=True)
 
         # ------------------------------------------------------------------
         # Totals — sum kW readings over 15-min intervals → kWh (* 0.25 h)

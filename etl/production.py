@@ -49,7 +49,7 @@ def run(target_date: date | None = None, time_interval: TimeInterval = "15m") ->
         log.warning("No customers found — nothing to do.")
         return
 
-    start_time, end_time = day_window(target_date)
+    start_time, end_time = day_window(target_date, limit_to_now=True)
     total_upserted = 0
 
     for c in customers:

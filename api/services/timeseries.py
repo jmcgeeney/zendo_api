@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
+from lib.series_util import interpolate_time_series
 from lib.time_util import day_window
 from lib.types import TimeSeriesPoint, HistoricalData
 
@@ -20,12 +21,12 @@ class TimeSeriesService:
     def __init__(self, db: DatabaseClient | None = None) -> None:
         self._db = db or DatabaseClient()
 
-    def get_historical_data(self, customer_id: int, day: date) -> HistoricalData:
+    def get_historical_data(self, customer_id: int, day: date, fill_gaps: bool = False) -> HistoricalData:
         customer = self._db.get_customer(customer_id)
         if customer is None:
             raise CustomerNotFoundError(customer_id)
 
-        start_time, end_time = day_window(day)
+        start_time, end_time = day_window(day, limit_to_now=True)
 
         production_rows = self._db.get_production_series(customer_id, start_time, end_time)
         consumption_rows = self._db.get_consumption_series(customer_id, start_time, end_time)
@@ -37,25 +38,39 @@ class TimeSeriesService:
         )
         correlation_rows = self._db.get_pearson_series(customer_id, start_time, end_time)
 
+        production = [
+                TimeSeriesPoint(timestamp=r.timestamp, value=r.power)
+                for r in production_rows
+            ]
+
+        consumption = [
+                TimeSeriesPoint(timestamp=r.timestamp, value=r.power)
+                for r in consumption_rows
+            ]
+
+        temperature = [
+                TimeSeriesPoint(timestamp=r.timestamp, value=r.temperature)
+                for r in weather_rows
+            ]
+        
+        irradiance = [
+                TimeSeriesPoint(timestamp=r.timestamp, value=r.irradiance)
+                for r in irradiance_rows
+            ]
+
+        if fill_gaps:
+            production = interpolate_time_series(production)
+            consumption = interpolate_time_series(consumption)
+            temperature = interpolate_time_series(temperature)
+            irradiance = interpolate_time_series(irradiance)        
+
         return HistoricalData(
             customer_id=customer_id,
             date=day,
-            production=[
-                TimeSeriesPoint(timestamp=r.timestamp, value=r.power)
-                for r in production_rows
-            ],
-            consumption=[
-                TimeSeriesPoint(timestamp=r.timestamp, value=r.power)
-                for r in consumption_rows
-            ],
-            temperature=[
-                TimeSeriesPoint(timestamp=r.timestamp, value=r.temperature)
-                for r in weather_rows
-            ],
-            irradiance=[
-                TimeSeriesPoint(timestamp=r.timestamp, value=r.irradiance)
-                for r in irradiance_rows
-            ],
+            production=production,
+            consumption=consumption,
+            temperature=temperature,
+            irradiance=irradiance,
             correlation={
                 "solar_irradiance_vs_production_correlation": correlation_rows[-1].solar_irradiance_vs_production,
                 "temperature_vs_consumption_correlation": correlation_rows[-1].temperature_vs_consumption

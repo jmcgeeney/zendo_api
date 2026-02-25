@@ -39,7 +39,7 @@ def run(target_date: date | None = None, time_interval: TimeInterval = "15m") ->
         return
 
     # Time window covering every interval in the target day
-    start_time, end_time = day_window(target_date)
+    start_time, end_time = day_window(target_date, limit_to_now=True)
 
     log.info("Processing %d customer(s).", len(customers))
 

@@ -12,50 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.router import router
 from api.config import settings
+from etl.orchestration import run_etl_chain
 
 log = logging.getLogger(__name__)
-
-
-def _run_etl_chain(target_date: date) -> None:
-    """Run the full ETL pipeline for *target_date* in dependency order.
-
-    Step 1 — irradiance    (independent source fetch)
-    Step 2 — consumption   (depends on weather)
-    Step 3 — production    (depends on irradiance)
-    Step 4 — pearson       (depends on consumption + production)
-    """
-    from etl.consumption import run as run_consumption
-    from etl.irradiance import run as run_irradiance
-    from etl.pearson import run as run_pearson
-    from etl.production import run as run_production
-
-    # -- Step 1: irradiance ----------------------------------------------
-    try:
-        run_irradiance(target_date=target_date)
-    except Exception as exc:
-        log.error("Irradiance ETL failed for %s: %s", target_date, exc)
-        return  # production and pearson depend on this
-
-    # -- Step 2: consumption (depends on weather) ------------------------
-    try:
-        run_consumption(target_date=target_date)
-    except Exception as exc:
-        log.error("Consumption ETL failed for %s: %s", target_date, exc)
-        return  # pearson depends on this
-
-    # -- Step 3: production (depends on irradiance) ----------------------
-    try:
-        run_production(target_date=target_date)
-    except Exception as exc:
-        log.error("Production ETL failed for %s: %s", target_date, exc)
-        return  # pearson depends on this
-
-    # -- Step 4: pearson (depends on consumption + production) -----------
-    try:
-        run_pearson(target_date=target_date)
-    except Exception as exc:
-        log.error("Pearson ETL failed for %s: %s", target_date, exc)
-
 
 def _run_backfill() -> None:
     """Run ETL for every day from BACKFILL_START_DATE up to and including today."""
@@ -83,7 +42,7 @@ def _run_backfill() -> None:
     current = start
     while current <= today:
         log.info("Backfilling %s ...", current)
-        _run_etl_chain(current)
+        run_etl_chain(current)
         current += timedelta(days=1)
 
     log.info("Backfill complete.")
@@ -91,7 +50,7 @@ def _run_backfill() -> None:
 
 def _scheduled_job() -> None:
     """ETL job that runs every 15 minutes — processes today's date."""
-    _run_etl_chain(date.today())
+    run_etl_chain(date.today())
 
 
 @asynccontextmanager
