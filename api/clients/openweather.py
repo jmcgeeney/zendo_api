@@ -1,8 +1,3 @@
-"""Client for the OpenWeatherMap API.
-
-Docs: https://openweathermap.org/api
-"""
-
 from datetime import date, datetime
 from typing import Literal, Optional, Union
 
@@ -23,6 +18,11 @@ class OpenWeatherError(Exception):
 
 
 class OpenWeatherClient:
+    """Client for the OpenWeatherMap API.
+
+    Docs: https://openweathermap.org/api
+    """
+    
     def __init__(
         self,
         api_key: str,
