@@ -48,13 +48,11 @@ Combined:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Sequence
 
 _G_STC = 1000.0  # W/m² — Standard Test Condition irradiance reference
+_NOCT_DELTA_T = 25.0  # °C — typical cell temperature rise above ambient at 1000 W/m²
 
-
-@dataclass
 class SolarSimulator:
     """Estimate AC solar power output from a GHI irradiance time series.
 
@@ -74,35 +72,35 @@ class SolarSimulator:
                                Defaults to −0.004 /°C, typical for
                                crystalline silicon.  Set to 0 to disable
                                temperature derating entirely.
-        noct_delta_t:          Cell temperature rise above ambient at
-                               1000 W/m² irradiance (°C).  Derived from the
-                               NOCT specification; 25 °C is a common default.
         interval_hours:        Duration of each time step in hours.  Does not
                                affect the power calculation but is recorded
                                for consistency with sibling simulators.
     """
 
-    installed_capacity_kw: float
-    performance_ratio: float = 0.80
-    temp_coefficient: float = -0.004
-    noct_delta_t: float = 25.0
-    interval_hours: float = 0.5
-
-    def __post_init__(self) -> None:
-        if self.installed_capacity_kw <= 0:
+    def __init__(
+        self,
+        installed_capacity_kw: float,
+        performance_ratio: float = 0.80,
+        temp_coefficient: float = -0.004,
+        interval_hours: float = 0.5,
+    ) -> None:
+        if installed_capacity_kw <= 0:
             raise ValueError("installed_capacity_kw must be positive")
-        if not 0.0 < self.performance_ratio <= 1.0:
+        if not 0.0 < performance_ratio <= 1.0:
             raise ValueError("performance_ratio must be in (0, 1]")
-        if self.noct_delta_t < 0:
-            raise ValueError("noct_delta_t must be non-negative")
-        if self.interval_hours <= 0:
+        if interval_hours <= 0:
             raise ValueError("interval_hours must be positive")
+
+        self.installed_capacity_kw = installed_capacity_kw
+        self.performance_ratio = performance_ratio
+        self.temp_coefficient = temp_coefficient
+        self.interval_hours = interval_hours
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _cell_temperature(self, t_amb: float, ghi: float) -> float:
+    def _cell_temperature(self, ambient_temp: float, ghi: float) -> float:
         """Estimate cell temperature using the NOCT approximation.
 
         Args:
@@ -112,7 +110,7 @@ class SolarSimulator:
         Returns:
             Estimated cell temperature (°C).
         """
-        return t_amb + self.noct_delta_t * (ghi / _G_STC)
+        return ambient_temp + _NOCT_DELTA_T * (ghi / _G_STC)
 
     def _temp_derating(self, t_cell: float) -> float:
         """Return the temperature derating factor for a given cell temperature.

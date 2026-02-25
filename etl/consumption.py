@@ -46,7 +46,7 @@ _DEFAULT_SIMULATOR_PARAMS: dict[str, Any] = {
     "utilisation": 0.60,
     "pue_base": 1.40,
     "pue_temp_coeff": 0.01,
-    "t_setpoint": 10.0,         # free-cooling threshold (°C) — realistic for UK climate
+    "temp_setpoint": 10.0,         # free-cooling threshold (°C) — realistic for UK climate
     "tau_cooling_hours": 1.0,
     "tau_mass_hours": 6.0,
     "alpha": 0.70,
@@ -156,7 +156,17 @@ def run(target_date: date | None = None) -> None:
 def _simulator_for_customer(customer: Any) -> Any:
     params = {**_DEFAULT_SIMULATOR_PARAMS}
     # Future: params.update(load_customer_dc_config(customer.customer_id))
-    return DatacenterSimulator(**params)
+    return DatacenterSimulator(
+        it_load_kw=1000.0,      # 1 MW IT load
+        utilisation=0.60,
+        pue_base=1.40,
+        pue_temp_coeff=0.01,
+        temp_setpoint=20.0,         # free-cooling threshold (°C) — realistic for UK climate
+        tau_cooling_hours=1.0,
+        tau_mass_hours=6.0,
+        alpha=0.70,
+        interval_hours=_INTERVAL_HOURS,
+    )
 
 
 # ---------------------------------------------------------------------------

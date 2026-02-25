@@ -38,14 +38,6 @@ class EnergySummary:
     weather_summary: WeatherSummary | None
     correlation: Correlation | None
 
-
-def _closest_temp(weather_rows: list, target_hour: int) -> float | None:
-    """Return the temperature from the row whose timestamp is closest to *target_hour*."""
-    if not weather_rows:
-        return None
-    return min(weather_rows, key=lambda r: abs(r.timestamp.hour - target_hour)).temperature
-
-
 class EnergySummaryService:
 
     def __init__(self, db: DatabaseClient | None = None) -> None:
