@@ -58,7 +58,7 @@ def _build_timestamps(start: datetime, end: datetime, time_interval: TimeInterva
     """Return all 15-minute-aligned UTC-naive datetimes in [start, end]."""
     timestamps: list[datetime] = []
     current = start
-    while current <= end:
+    while current < end:
         timestamps.append(current)
         current += timedelta(minutes=interval_minutes(time_interval))
     return timestamps
