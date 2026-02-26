@@ -88,8 +88,6 @@ class DatacenterSimulator:
             # Total facility power = IT load × utilisation × PUE
             load = self.it_load_kw * self.utilisation * pue
 
-            print(t_amb)
-
             jittered_load = load + predictable_jitter(t_amb, self.jitter, 2)
 
             loads.append(jittered_load)
